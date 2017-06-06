@@ -132,7 +132,7 @@ class NotificationController extends ActionController
                         $this->addItemToQueue($command['type'], intval($command['id']));
                         break;
                     case self::COMMAND_UPDATE;
-                        $this->updateItemInQueue($command['type'], intval($command['id']));
+                        $this->addItemToQueue($command['type'], intval($command['id']));
                         break;
                     case self::COMMAND_DELETE;
                         $this->deleteItemFromQueueAndCore($command['type'], intval($command['id']));
@@ -175,7 +175,8 @@ class NotificationController extends ActionController
         switch ($type) {
             case self::TYPE_ARTICLE;
                 if ($this->indexQueue->containsItem(self::SOLR_ITEM_TYPE_ARTICLE, $id)) {
-                    return $this->updateItemInQueue($type, $id);
+                    $this->updateItemInQueue($type, $id);
+                    break;
                 }
                 $item = [
                     'item_type' => self::SOLR_ITEM_TYPE_ARTICLE,
@@ -187,7 +188,8 @@ class NotificationController extends ActionController
                 break;
             case self::TYPE_CATEGORY;
                 if ($this->indexQueue->containsItem(self::SOLR_ITEM_TYPE_CATEGORY, $id)) {
-                    return $this->updateItemInQueue($type, $id);
+                    $this->updateItemInQueue($type, $id);
+                    break;
                 }
                 $item = [
                     'item_type' => self::SOLR_ITEM_TYPE_CATEGORY,
