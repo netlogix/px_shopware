@@ -1,4 +1,5 @@
 <?php
+
 namespace Portrino\PxShopware\LinkHandler;
 
 /***************************************************************
@@ -33,6 +34,7 @@ use TYPO3\CMS\Core\Imaging\Icon;
 use TYPO3\CMS\Core\Page\PageRenderer;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\Utility\StringUtility;
+use TYPO3\CMS\Extbase\Persistence\ObjectStorage;
 use TYPO3\CMS\Recordlist\LinkHandler\LinkHandlerInterface;
 use TYPO3\CMS\Recordlist\Tree\View\LinkParameterProviderInterface;
 
@@ -84,40 +86,49 @@ class AbstractLinkHandler extends \TYPO3\CMS\Recordlist\LinkHandler\AbstractLink
      */
     public function render(ServerRequestInterface $request)
     {
-        GeneralUtility::makeInstance(PageRenderer::class)->loadRequireJsModule('TYPO3/CMS/PxShopware/' . ucfirst($this->type) .  'LinkHandler');
+        GeneralUtility::makeInstance(PageRenderer::class)->loadRequireJsModule('TYPO3/CMS/PxShopware/' . ucfirst($this->type) . 'LinkHandler');
         $listContent = '';
 
         $objects = $this->client->findAll();
         if ($objects->count()) {
-            $titleLen = (int)$this->getBackendUser()->uc['titleLen'];
-            $currentIdentifier = $this->object ? $this->object->getId() : 0;
-
-            $listContent .= '<ul class="list-tree">';
-            foreach ($objects as $object) {
-                $selected = $currentIdentifier === $object->getId() ? ' class="active"' : '';
-                $icon = '<span title="' . htmlspecialchars($object->getSelectItemLabel()) . '">'
-                    . $this->iconFactory->getIcon('px-shopware-' . $this->type, Icon::SIZE_SMALL)
-                    . '</span>';
-                $listContent .=
-                    '<li' . $selected . '>
-                        <span class="list-tree-group">
-                            <a href="#" class="t3js-fileLink list-tree-group" title="' . htmlspecialchars($object->getSelectItemLabel()) . '" data-' . $this->type . '="' . $this->getPrefix() . htmlspecialchars($object->getId()) . '">
-                                <span class="list-tree-icon">' . $icon . '</span>
-                                <span class="list-tree-title">' . htmlspecialchars(GeneralUtility::fixed_lgd_cs($object->getSelectItemLabel(), $titleLen)) . '</span>
-                            </a>
-                        </span>
-                    </li>';
-            }
-            $listContent .= '</ul>';
+            $listContent = $this->renderContent($objects);
         }
 
-        $content = '<table border="0" cellpadding="0" cellspacing="0" id="typo3-linkFiles">
-                        <tr>
-                            <td class="c-wCell" valign="top"><h3>' . $this->getLanguageService()->sL('LLL:EXT:px_shopware/Resources/Private/Language/locallang_db.xlf:link_handler.' . $this->type) . ':</h3>' . $listContent . '</td>
-                        </tr>
-                    </table>';
+        return '
+<table border="0" cellpadding="0" cellspacing="0" id="typo3-linkFiles">
+    <tr>
+        <td class="c-wCell" valign="top"><h3>' . $this->getLanguageService()->sL('LLL:EXT:px_shopware/Resources/Private/Language/locallang_db.xlf:link_handler.' . $this->type) . ':</h3>' . $listContent . '</td>
+    </tr>
+</table>';
+    }
 
-        return $content;
+    /**
+     * @param ObjectStorage <\Portrino\PxShopware\Domain\Model\ShopwareModelInterface> $objects
+     * @return string
+     */
+    protected function renderContent(ObjectStorage $objects)
+    {
+        $titleLen = (int)$this->getBackendUser()->uc['titleLen'];
+        $currentIdentifier = $this->object ? $this->object->getId() : 0;
+
+        $content = '';
+        foreach ($objects as $object) {
+            $selected = $currentIdentifier === $object->getId() ? ' class="active"' : '';
+            $icon = '<span title="' . htmlspecialchars($object->getSelectItemLabel()) . '">'
+                . $this->iconFactory->getIcon('px-shopware-' . $this->type, Icon::SIZE_SMALL)
+                . '</span>';
+            $content .=
+'<li' . $selected . '>
+    <span class="list-tree-group">
+        <a href="#" class="t3js-fileLink list-tree-group" title="' . htmlspecialchars($object->getSelectItemLabel()) . '" data-' . $this->type . '="' . $this->getPrefix() . htmlspecialchars($object->getId()) . '">
+            <span class="list-tree-icon">' . $icon . '</span>
+            <span class="list-tree-title">' . htmlspecialchars(GeneralUtility::fixed_lgd_cs($object->getSelectItemLabel(),
+$titleLen)) . '</span>
+        </a>
+    </span>
+</li>';
+        }
+        return '<ul class="list-tree">' . $content . '</ul>';
     }
 
     /**

@@ -1,4 +1,5 @@
 <?php
+
 namespace Portrino\PxShopware\Domain\Model;
 
 /***************************************************************
@@ -77,6 +78,11 @@ class Category extends AbstractShopwareModel implements SuggestEntryInterface, I
     /**
      * @var int
      */
+    protected $parentId;
+
+    /**
+     * @var int
+     */
     protected $language;
 
     /**
@@ -101,6 +107,9 @@ class Category extends AbstractShopwareModel implements SuggestEntryInterface, I
         }
         if (isset($this->raw->changed)) {
             $this->setChanged($this->raw->changed);
+        }
+        if (isset($this->raw->parentId)) {
+            $this->setParentId($this->raw->parentId);
         }
 
         if ($this->raw->path) {
@@ -180,6 +189,22 @@ class Category extends AbstractShopwareModel implements SuggestEntryInterface, I
             $changed = new \DateTime($changed);
         }
         $this->changed = $changed;
+    }
+
+    /**
+     * @return int
+     */
+    public function getParentId()
+    {
+        return $this->parentId;
+    }
+
+    /**
+     * @param int $parentId
+     */
+    public function setParentId($parentId)
+    {
+        $this->parentId = (int)$parentId;
     }
 
     /**
