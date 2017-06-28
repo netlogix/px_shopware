@@ -32,6 +32,7 @@ use Portrino\PxShopware\Service\Shopware\Exceptions\ShopwareApiClientJsonExcepti
 use Portrino\PxShopware\Service\Shopware\Exceptions\ShopwareApiClientRequestException;
 use Portrino\PxShopware\Service\Shopware\Exceptions\ShopwareApiClientResponseException;
 use TYPO3\CMS\Core\Cache\Frontend\FrontendInterface;
+use TYPO3\CMS\Core\Http\HttpRequest;
 use TYPO3\CMS\Core\Log\LogLevel;
 use TYPO3\CMS\Core\Log\LogManager;
 use TYPO3\CMS\Core\SingletonInterface;
@@ -47,21 +48,6 @@ use TYPO3\CMS\Extbase\Persistence\ObjectStorage;
  */
 abstract class AbstractShopwareApiClient implements SingletonInterface, AbstractShopwareApiClientInterface
 {
-
-    const METHOD_GET = 'GET';
-    const METHOD_PUT = 'PUT';
-    const METHOD_POST = 'POST';
-    const METHOD_DELETE = 'DELETE';
-
-    /**
-     * @var array
-     */
-    protected $validMethods = [
-        self::METHOD_GET,
-        self::METHOD_PUT,
-        self::METHOD_POST,
-        self::METHOD_DELETE
-    ];
 
     /**
      * @var string
@@ -82,11 +68,6 @@ abstract class AbstractShopwareApiClient implements SingletonInterface, Abstract
      * @var int
      */
     protected $cacheLifeTime = 0;
-
-    /**
-     * @var resource
-     */
-    protected $cURL;
 
     /**
      * the language id we should send to shopware API
@@ -143,19 +124,6 @@ abstract class AbstractShopwareApiClient implements SingletonInterface, Abstract
             $this->logException($exception);
         }
 
-        /**
-         * curl initialization
-         */
-        $this->cURL = curl_init();
-        curl_setopt($this->cURL, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($this->cURL, CURLOPT_FOLLOWLOCATION, false);
-        curl_setopt($this->cURL, CURLOPT_USERAGENT, 'Shopware ApiClient');
-        curl_setopt($this->cURL, CURLOPT_HTTPAUTH, CURLAUTH_DIGEST);
-        curl_setopt($this->cURL, CURLOPT_USERPWD, $this->username . ':' . $this->apiKey);
-        curl_setopt($this->cURL, CURLOPT_HTTPHEADER, [
-            'Content-Type: application/json; charset=utf-8',
-        ]);
-
         // cache initialization (if caching is not disabled!)
         if ($this->configurationService->isCachingEnabled()) {
             /** @var CacheChainFactory $cacheChainFactory */
@@ -191,7 +159,7 @@ abstract class AbstractShopwareApiClient implements SingletonInterface, Abstract
      * @throws ShopwareApiClientRequestException
      * @throws \Exception
      */
-    public function call($endpoint, $method = self::METHOD_GET, $data = [], $params = [], $doCacheRequest = true)
+    public function call($endpoint, $method = HttpRequest::METHOD_GET, $data = [], $params = [], $doCacheRequest = true)
     {
         $entry = null;
 
@@ -213,7 +181,7 @@ abstract class AbstractShopwareApiClient implements SingletonInterface, Abstract
          *  - cache is available
          */
         $cacheIdentifier = sha1((string)$url);
-        $cachingEnabled = ($method == self::METHOD_GET && $doCacheRequest === true && $this->cache !== null);
+        $cachingEnabled = ($method == HttpRequest::METHOD_GET && $doCacheRequest === true && $this->cache !== null);
 
 
         if ($cachingEnabled && $this->cache->has($cacheIdentifier)) {
@@ -222,19 +190,14 @@ abstract class AbstractShopwareApiClient implements SingletonInterface, Abstract
 
         try {
 
-            if (!in_array($method, $this->validMethods)) {
-                throw new ShopwareApiClientRequestException('Invalid HTTP-Methode: ' . $method);
+            $request = $this->getHttpRequest($url, $method);
+            if (in_array($method, [HttpRequest::METHOD_POST, HttpRequest::METHOD_PUT])) {
+                $dataString = json_encode($data);
+                $request->setBody($dataString);
             }
 
-            $dataString = json_encode($data);
-
-            curl_setopt($this->cURL, CURLOPT_URL, $url);
-            curl_setopt($this->cURL, CURLOPT_CUSTOMREQUEST, $method);
-            curl_setopt($this->cURL, CURLOPT_POSTFIELDS, $dataString);
-
-            $result = curl_exec($this->cURL);
-            $entry = $this->prepareResponse($result);
-            $result = json_decode($entry);
+            $response = $request->send();
+            $result = $this->prepareResponse($response);
 
             /**
              * only cache when:
@@ -244,7 +207,7 @@ abstract class AbstractShopwareApiClient implements SingletonInterface, Abstract
              */
             if ($cachingEnabled) {
                 $cacheTags = $this->generateCacheTags($endpoint, $result);
-                $this->cache->set($cacheIdentifier, $entry, $cacheTags, $this->cacheLifeTime);
+                $this->cache->set($cacheIdentifier, $response->getBody(), $cacheTags, $this->cacheLifeTime);
             }
 
             return $result;
@@ -255,21 +218,21 @@ abstract class AbstractShopwareApiClient implements SingletonInterface, Abstract
     }
 
     /**
-     * @param string $result
+     * @param \HTTP_Request2_Response $response
      * @return mixed|string
      * @throws ShopwareApiClientJsonException
      * @throws ShopwareApiClientResponseException
      */
-    protected function prepareResponse($result)
+    protected function prepareResponse(\HTTP_Request2_Response $response)
     {
 
-        if (null === $decodedResult = json_decode($result, true)) {
+        if (null === $decodedResult = json_decode($response->getBody(), true)) {
 
             $jsonErrors = [
                 JSON_ERROR_NONE => 'No error occurred',
-                JSON_ERROR_DEPTH => 'The maximum stack depth has been reached - Original Response:' . $result,
-                JSON_ERROR_CTRL_CHAR => 'Control character issue, maybe wrong encoded - Original Response:' . $result,
-                JSON_ERROR_SYNTAX => 'Syntaxerror - Original Response:' . $result,
+                JSON_ERROR_DEPTH => 'The maximum stack depth has been reached - Original Response:' . $response->getBody(),
+                JSON_ERROR_CTRL_CHAR => 'Control character issue, maybe wrong encoded - Original Response:' . $response->getBody(),
+                JSON_ERROR_SYNTAX => 'Syntaxerror - Original Response:' . $response->getBody(),
             ];
 
             throw new ShopwareApiClientJsonException($jsonErrors[json_last_error()], 1458808216);
@@ -284,7 +247,7 @@ abstract class AbstractShopwareApiClient implements SingletonInterface, Abstract
         }
 
         if (isset($decodedResult['data'])) {
-            return $result;
+            return json_decode($response->getBody());
         }
     }
 
@@ -334,7 +297,7 @@ abstract class AbstractShopwareApiClient implements SingletonInterface, Abstract
      */
     public function get($url, $params = [], $doCacheRequest = true)
     {
-        return $this->call($url, self::METHOD_GET, [], $params, $doCacheRequest);
+        return $this->call($url, HttpRequest::METHOD_GET, [], $params, $doCacheRequest);
     }
 
     /**
@@ -347,7 +310,7 @@ abstract class AbstractShopwareApiClient implements SingletonInterface, Abstract
      */
     public function post($url, $data = [], $params = [])
     {
-        return $this->call($url, self::METHOD_POST, $data, $params);
+        return $this->call($url, HttpRequest::METHOD_POST, $data, $params);
     }
 
     /**
@@ -360,7 +323,7 @@ abstract class AbstractShopwareApiClient implements SingletonInterface, Abstract
      */
     public function put($url, $data = [], $params = [])
     {
-        return $this->call($url, self::METHOD_PUT, $data, $params);
+        return $this->call($url, HttpRequest::METHOD_PUT, $data, $params);
     }
 
     /**
@@ -372,7 +335,7 @@ abstract class AbstractShopwareApiClient implements SingletonInterface, Abstract
      */
     public function delete($url, $params = [])
     {
-        return $this->call($url, self::METHOD_DELETE, [], $params);
+        return $this->call($url, HttpRequest::METHOD_DELETE, [], $params);
     }
 
     /**
@@ -513,7 +476,8 @@ abstract class AbstractShopwareApiClient implements SingletonInterface, Abstract
      */
     public function findByTerm($term, $limit = -1, $doCacheRequest = true, $params = [])
     {
-        $shopwareModels = new ObjectStorage();
+        $storage = new ObjectStorage();
+        $entities = [];
 
         ArrayUtility::mergeRecursiveWithOverrule($params, [
             'limit' => $limit,
@@ -536,18 +500,18 @@ abstract class AbstractShopwareApiClient implements SingletonInterface, Abstract
         if ($result) {
             $token = (isset($result->pxShopwareTypo3Token)) ? (bool)$result->pxShopwareTypo3Token : false;
             if (isset($result->data) && is_array($result->data)) {
-                foreach ($result->data as $data) {
-                    if (isset($data->id)) {
-                        /** @var \Portrino\PxShopware\Domain\Model\AbstractShopwareModel $shopwareModel */
-                        $shopwareModel = $this->objectManager->get($this->getEntityClassName(), $data, $token);
-                        if ($shopwareModel != null) {
-                            $shopwareModels->attach($shopwareModel);
-                        }
-                    }
-                }
+                $entities = array_map(function ($data) use ($token) {
+                    return $this->objectManager->get($this->getEntityClassName(), $data, $token);
+                }, array_filter($result->data, function ($data) {
+                    return isset($data->id);
+                }));
             }
         }
-        return $shopwareModels;
+
+        array_walk($entities, function ($entity) use ($storage) {
+            $storage->attach($entity);
+        });
+        return $storage;
     }
 
     /**
@@ -558,7 +522,8 @@ abstract class AbstractShopwareApiClient implements SingletonInterface, Abstract
      */
     public function findAll($doCacheRequest = true, $params = [])
     {
-        $shopwareModelArray = [];
+        $storage = new ObjectStorage();
+        $entities = [];
 
         $params['limit'] = isset($params['limit']) ? $params['limit'] : 1000;
         $params['start'] = isset($params['start']) ? $params['start'] : 0;
@@ -568,55 +533,30 @@ abstract class AbstractShopwareApiClient implements SingletonInterface, Abstract
         if ($result) {
 
             $token = (isset($result->pxShopwareTypo3Token)) ? (bool)$result->pxShopwareTypo3Token : false;
+            $total = $result->total;
+
             if (isset($result->data) && is_array($result->data)) {
-                foreach ($result->data as $data) {
-                    if (isset($data->id)) {
-                        /** @var \Portrino\PxShopware\Domain\Model\AbstractShopwareModel $shopwareModel */
-                        $shopwareModel = $this->objectManager->get($this->getEntityClassName(), $data, $token);
-                        if ($shopwareModel != null) {
-                            $shopwareModelArray[$shopwareModel->getId()] = $shopwareModel;
-                        }
-                    }
-                }
-                $total = $result->total;
+                while (count($result->data) <= $total) {
+                    $params['start'] = $params['start'] + $params['limit'];
+                    $nextResult = $this->get($this->getValidEndpoint(), $params, $doCacheRequest);
+                    $result->data = array_merge($result->data, $nextResult->data);
 
-                    // shop has more items than first request returned? poll again!
-                if ($total > 0 && $total > count($shopwareModelArray) + $params['start']) {
-
-                    $i = 0;
-                        // safety break
-                    while ($i < 99) {
-                            // increase offset (called start in shopware)
-                        $params['start'] = $params['start'] + $params['limit'];
-                            // get API result
-                        $additionalResults = $this->findByParams($params, $doCacheRequest);
-                        foreach ($additionalResults as $additionalResult) {
-                                // add new items to original array, if not already there
-                            if (!array_key_exists($additionalResult->getId(), $shopwareModelArray)) {
-                                $shopwareModelArray[$additionalResult->getId()] = $additionalResult;
-                            }
-                        }
-
-                            // stop if API returns empty
-                        if ($additionalResults->count() == 0) {
-                            break;
-                        }
-                            // stop if total count is reached
-                        if (count($shopwareModelArray) >= $total) {
-                            break;
-                        }
-                        $i++;
+                    // stop if API returns empty
+                    if (count($nextResult->data) === 0) {
+                        break;
                     }
                 }
             }
+
+            $entities = array_map(function ($data) use ($token) {
+                return $this->objectManager->get($this->getEntityClassName(), $data, $token);
+            }, $result->data);
         }
 
-            // transform array of models to ObjectStorage
-        $shopwareModels = new ObjectStorage();
-        foreach ($shopwareModelArray as $shopwareModel) {
-            $shopwareModels->attach($shopwareModel);
-        }
-        return $shopwareModels;
+        array_walk($entities, function ($entity) use ($storage) {
+            $storage->attach($entity);
+        });
+        return $storage;
     }
 
     /**
@@ -644,6 +584,23 @@ abstract class AbstractShopwareApiClient implements SingletonInterface, Abstract
             }
         }
         return $shopwareModels;
+    }
+
+    /**
+     * @param $url
+     * @param string $method
+     * @return HttpRequest
+     */
+    private function getHttpRequest($url, $method = HttpRequest::METHOD_GET)
+    {
+        $defaultConfig = ['follow_redirects' => false];
+        /** @var HttpRequest $httpRequest */
+        $httpRequest = GeneralUtility::makeInstance(HttpRequest::class, $url, $method, $defaultConfig);
+        $httpRequest->setHeader('Content-Type', 'application/json; charset=utf-8');
+        $httpRequest->setHeader('user-agent', 'Shopware ApiClient');
+        $httpRequest->setAuth($this->username, $this->apiKey, HttpRequest::AUTH_DIGEST);
+
+        return $httpRequest;
     }
 
 }
