@@ -72,11 +72,6 @@ class PageLayoutViewDraw implements PageLayoutViewDrawItemHookInterface
     protected $typoScriptService;
 
     /**
-     * @var LanguageToShopwareMappingService
-     */
-    protected $languageToShopMappingService;
-
-    /**
      * @var FlexFormService
      */
     protected $flexFormService;
@@ -117,9 +112,6 @@ class PageLayoutViewDraw implements PageLayoutViewDrawItemHookInterface
         $this->settings = $this->configurationManager->getConfiguration('PxShopware');
         $this->typoScriptService = $this->objectManager->get(TypoScriptService::class);
         $this->flexFormService = $this->objectManager->get(FlexFormService::class);
-        $this->articleClient = $this->objectManager->get(ArticleClient::class);
-        $this->categoryClient = $this->objectManager->get(CategoryClient::class);
-        $this->languageToShopMappingService = $this->objectManager->get(LanguageToShopwareMappingService::class);
         $this->databaseConnection = $this->getDatabase();
         $this->languageService = $this->getLanguageService();
 
@@ -144,10 +136,10 @@ class PageLayoutViewDraw implements PageLayoutViewDrawItemHookInterface
 
         switch ($CType) {
             case 'pxshopware_pi1':
-                $this->shopwareClient = GeneralUtility::makeInstance(ArticleClient::class);
+                $this->shopwareClient =  $this->objectManager->get(ArticleClient::class);
                 break;
             case 'pxshopware_pi2':
-                $this->shopwareClient = GeneralUtility::makeInstance(CategoryClient::class);
+                $this->shopwareClient =  $this->objectManager->get(CategoryClient::class);
                 break;
         }
     }
@@ -189,7 +181,7 @@ class PageLayoutViewDraw implements PageLayoutViewDrawItemHookInterface
         $selectedItemsArray = isset($flexformConfiguration['settings']['items']) ? GeneralUtility::trimExplode(',', $flexformConfiguration['settings']['items'], TRUE) : [];
 
         foreach ($selectedItemsArray as $item) {
-            $language = $this->languageToShopMappingService->getShopIdBySysLanguageUid($row['sys_language_uid']);
+            $language = LanguageToShopwareMappingService::getShopIdByPageAndLanguage((int)$row['pid'], (int)$row['sys_language_uid']);
             /** @var ItemEntryInterface $selectedItem */
             $selectedItem = $this->shopwareClient->findById($item, false, ['language' => $language]);
 

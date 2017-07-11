@@ -24,9 +24,10 @@ namespace Portrino\PxShopware\Service\Shopware;
  *
  *  This copyright notice MUST APPEAR in all copies of the script!
  ***************************************************************/
+use Portrino\PxShopware\Service\Util;
 use TYPO3\CMS\Core\SingletonInterface;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
-use TYPO3\CMS\Extbase\Configuration\ConfigurationManagerInterface;
+use TYPO3\CMS\Extbase\Configuration\ConfigurationManager;
 
 /**
  * Class LanguageToShopwareMappingService
@@ -50,10 +51,36 @@ class LanguageToShopwareMappingService implements SingletonInterface
 
     public function initializeObject()
     {
-        $this->settings = $this->configurationManager->getConfiguration(ConfigurationManagerInterface::CONFIGURATION_TYPE_SETTINGS, 'PxShopware');
+        $this->settings = $this->configurationManager->getConfiguration(ConfigurationManager::CONFIGURATION_TYPE_SETTINGS, 'PxShopware');
     }
 
     /**
+     * @param int $page
+     * @param int $language
+     *
+     * @return integer the shop id for the specific language in SW
+     */
+    public static function getShopIdByPageAndLanguage($page, $language)
+    {
+        $shopId = 1;
+        if (TYPO3_MODE === 'FE' || $page === 0) {
+            $settings = GeneralUtility::makeInstance(ConfigurationManager::class)->getConfiguration(ConfigurationManager::CONFIGURATION_TYPE_SETTINGS, 'PxShopware');
+        } else {
+            $page = Util::getRootPageId($page);
+            $settings = Util::getConfigurationFromPageId($page, $language);
+        }
+
+        foreach ($settings['api']['languageToShopware'] as $shopToLocaleMapping) {
+            if ((int)$language === (int)$shopToLocaleMapping['sys_language_uid']) {
+                $shopId = (int)$shopToLocaleMapping['shop_id'];
+                break;
+            }
+        }
+        return $shopId;
+    }
+
+    /**
+     * @deprecated
      * @param int $sys_language_uid
      *
      * @return integer the shop id for the specific language in SW
@@ -76,6 +103,7 @@ class LanguageToShopwareMappingService implements SingletonInterface
     }
 
     /**
+     * @deprecated
      * @param int $sys_language_uid
      *
      * @return integer the parent category id for the specific language in SW

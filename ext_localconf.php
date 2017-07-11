@@ -239,9 +239,21 @@ call_user_func(function ($_EXTKEY) {
             ];
         }
 
+        if (false === is_array($GLOBALS['TYPO3_CONF_VARS']['SYS']['caching']['cacheConfigurations']['px_shopware_configuration'])) {
+            $GLOBALS['TYPO3_CONF_VARS']['SYS']['caching']['cacheConfigurations']['px_shopware_configuration'] = [
+                'backend' => \TYPO3\CMS\Core\Cache\Backend\Typo3DatabaseBackend::class,
+                'frontend' => \TYPO3\CMS\Core\Cache\Frontend\VariableFrontend::class,
+                'options' => [
+                    'defaultLifetime' => (int)$extConf['caching.']['lifetime'] > 0 ? (int)$extConf['caching.']['lifetime'] : 86400
+                ],
+                'groups' => ['all']
+            ];
+        }
+
         $GLOBALS['TYPO3_CONF_VARS']['EXT']['px_shopware']['cache_chain'] = [
             0 => 'px_shopware_level1',
             1 => 'px_shopware',
+            2 => 'px_shopware_configuration',
         ];
     }
 

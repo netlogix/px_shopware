@@ -95,12 +95,6 @@ abstract class AbstractShopwareApiClient implements SingletonInterface, Abstract
     protected $persistenceManager;
 
     /**
-     * @var \Portrino\PxShopware\Service\Shopware\LanguageToShopwareMappingService
-     * @inject
-     */
-    protected $languageToShopMappingService;
-
-    /**
      * @var FrontendInterface
      */
     protected $cache;
@@ -142,7 +136,7 @@ abstract class AbstractShopwareApiClient implements SingletonInterface, Abstract
              */
             $language = GeneralUtility::trimExplode('.', $GLOBALS['TSFE']->config['config']['sys_language_uid'], true);
             $language = ($language && isset($language[0])) ? $language[0] : 0;
-            $this->shopId = $this->languageToShopMappingService->getShopIdBySysLanguageUid($language);
+            $this->shopId = LanguageToShopwareMappingService::getShopIdByPageAndLanguage($GLOBALS['TSFE']->id, $language);
         } else {
             $this->shopId = null;
         }

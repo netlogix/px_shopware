@@ -183,7 +183,8 @@ class SuggestWizard {
         /** @var AbstractShopwareApiClientInterface $shopwareApiClient */
         $shopwareApiClient = $this->objectManager->get($shopwareApiClientClass);
 
-        $shopId = $this->localeToShopMappingService->getShopIdBySysLanguageUid($language);
+        // TODO: Get the correct page id. Currently we use default settings.
+        $shopId = LanguageToShopwareMappingService::getShopIdByPageAndLanguage(0, $language);
         $results = $shopwareApiClient->findByTerm($search, 8, TRUE, ['language' => $shopId]);
 
         /** @var SuggestEntryInterface $result */

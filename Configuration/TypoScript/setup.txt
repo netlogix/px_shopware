@@ -25,16 +25,16 @@ plugin.tx_pxshopware {
 
             # language to shop mapping configuration for localization of resources
             languageToShopware {
-                0 {
-                    shop_id = 1
-                    parentCategory =
-                    sys_language_uid = 0
-                }
-                1 {
-                    shop_id = 2
-                    parentCategory =
-                    sys_language_uid = 1
-                }
+#                0 {
+#                    shop_id = 1
+#                    parentCategory =
+#                    sys_language_uid = 0
+#                }
+#                1 {
+#                    shop_id = 2
+#                    parentCategory =
+#                    sys_language_uid = 1
+#                }
                 # ...
             }
         }

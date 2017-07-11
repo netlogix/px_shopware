@@ -55,11 +55,6 @@ class AbstractShopwareIndexer extends Indexer
     protected $objectManager;
 
     /**
-     * @var LanguageToShopwareMappingService
-     */
-    protected $languageToShopMappingService;
-
-    /**
      * Constructor
      *
      * @param array $options of indexer options
@@ -69,7 +64,6 @@ class AbstractShopwareIndexer extends Indexer
         parent::__construct($options);
 
         $this->objectManager = GeneralUtility::makeInstance(ObjectManager::class);
-        $this->languageToShopMappingService = $this->objectManager->get(LanguageToShopwareMappingService::class);
     }
 
     /**
@@ -177,7 +171,7 @@ class AbstractShopwareIndexer extends Indexer
     protected function getShopwareRecord(Item $item, $language = 0)
     {
         $shopwareClient = $this->objectManager->get($this->clientClassName);
-        $shopId = $this->languageToShopMappingService->getShopIdBySysLanguageUid($language);
+        $shopId = LanguageToShopwareMappingService::getShopIdByPageAndLanguage((int)$item->getRootPageUid(), $language);
         return $shopwareClient->findById($item->getRecordUid(), true, ['language' => $shopId]);
     }
 
