@@ -4,9 +4,11 @@ namespace Portrino\PxShopware\Service;
 
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Cache\CacheManager;
+use TYPO3\CMS\Core\Page\PageRenderer;
 use TYPO3\CMS\Core\TimeTracker\NullTimeTracker;
 use TYPO3\CMS\Core\TypoScript\ExtendedTemplateService;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
+use TYPO3\CMS\Extbase\Reflection\ObjectAccess;
 use TYPO3\CMS\Extbase\Service\TypoScriptService;
 use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
 use TYPO3\CMS\Frontend\Page\PageRepository;
@@ -34,12 +36,23 @@ class Util
         $configuration = $cache->get($cacheId);
 
         if (!$configuration) {
+            $store = [];
+            /** @var PageRenderer $pageRenderer */
+            $pageRenderer = GeneralUtility::makeInstance(PageRenderer::class);
+            foreach (['backPath', 'templateFile'] as $key) {
+                $store[$key] = ObjectAccess::getProperty($pageRenderer, $key);
+            }
+
             if (!isset($GLOBALS['TSFE'])) {
                 self::initializeTsfe($pageId, $language);
             }
             $configuration = self::getConfigurationFromInitializedTSFE('plugin.tx_pxshopware.settings');
             $configuration = GeneralUtility::makeInstance(TypoScriptService::class)->convertTypoScriptArrayToPlainArray($configuration);
             $cache->set($cacheId, $configuration);
+
+            foreach ($store as $key => $value) {
+                ObjectAccess::setProperty($pageRenderer, $key, $value);
+            }
         }
 
         return $configuration;
