@@ -34,9 +34,20 @@ class Shop extends AbstractShopwareModel
 {
 
     /**
+     * @var \Portrino\PxShopware\Service\Shopware\CategoryClientInterface
+     * @inject
+     */
+    protected $categoryClient;
+
+    /**
      * @var string
      */
     protected $name = '';
+
+    /**
+     * @var integer
+     */
+    protected $categoryId;
 
     /**
      * @param object $raw
@@ -48,6 +59,10 @@ class Shop extends AbstractShopwareModel
 
         if (isset($this->raw->name)) {
             $this->setName($this->raw->name);
+        }
+
+        if (isset($this->raw->categoryId)) {
+            $this->categoryId = $this->raw->categoryId;
         }
     }
 
@@ -65,6 +80,22 @@ class Shop extends AbstractShopwareModel
     public function setName($name)
     {
         $this->name = $name;
+    }
+
+    /**
+     * @return int
+     */
+    public function getCategoryId()
+    {
+        return $this->categoryId;
+    }
+
+    /**
+     * @return Category
+     */
+    public function getCategory()
+    {
+        return $this->categoryClient->findById($this->categoryId);
     }
 
 }

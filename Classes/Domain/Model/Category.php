@@ -83,6 +83,26 @@ class Category extends AbstractShopwareModel implements SuggestEntryInterface, I
     /**
      * @var int
      */
+    protected $active = false;
+
+    /**
+     * @var string
+     */
+    protected $external;
+
+    /**
+     * @var int
+     */
+    protected $hideTop = false;
+
+    /**
+     * @var array
+     */
+    protected $customerGroups = [];
+
+    /**
+     * @var int
+     */
     protected $language;
 
     /**
@@ -111,6 +131,18 @@ class Category extends AbstractShopwareModel implements SuggestEntryInterface, I
         if (isset($this->raw->parentId)) {
             $this->setParentId($this->raw->parentId);
         }
+        if (isset($this->raw->active)) {
+            $this->setActive($this->raw->active);
+        }
+        if (isset($this->raw->external)) {
+            $this->setExternal($this->raw->external);
+        }
+        if (isset($this->raw->hideTop)) {
+            $this->setHideTop($this->raw->hideTop);
+        }
+        if (isset($this->raw->customerGroups)) {
+            $this->setCustomerGroups($this->raw->customerGroups);
+        }
 
         if ($this->raw->path) {
             if (!$this->languageToShopMappingService) {
@@ -135,6 +167,14 @@ class Category extends AbstractShopwareModel implements SuggestEntryInterface, I
     public function getSubCategories()
     {
         return $this->categoryClient->findByParent($this->id);
+    }
+
+    /**
+     * @return \Portrino\PxShopware\Domain\Model\Category
+     */
+    public function getParentCategory()
+    {
+        return $this->categoryClient->findById($this->parentId);
     }
 
     /**
@@ -221,6 +261,70 @@ class Category extends AbstractShopwareModel implements SuggestEntryInterface, I
     public function setImage(\Portrino\PxShopware\Domain\Model\Media $image)
     {
         $this->image = $image;
+    }
+
+    /**
+     * @return int
+     */
+    public function getActive()
+    {
+        return $this->active;
+    }
+
+    /**
+     * @param int $active
+     */
+    public function setActive($active)
+    {
+        $this->active = $active;
+    }
+
+    /**
+     * @return string
+     */
+    public function getExternal()
+    {
+        return $this->external;
+    }
+
+    /**
+     * @param string $external
+     */
+    public function setExternal($external)
+    {
+        $this->external = $external;
+    }
+
+    /**
+     * @return int
+     */
+    public function getHideTop()
+    {
+        return $this->hideTop;
+    }
+
+    /**
+     * @param int $hideTop
+     */
+    public function setHideTop($hideTop)
+    {
+        $this->hideTop = $hideTop;
+    }
+
+    /**
+     * @return array
+     */
+    public function getCustomerGroups()
+    {
+        return $this->customerGroups;
+    }
+
+    /**
+     * @param array $customerGroups
+     */
+    public function setCustomerGroups($customerGroups)
+    {
+        $this->customerGroups = $customerGroups;
     }
 
     /**

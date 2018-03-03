@@ -38,4 +38,13 @@ interface ShopClientInterface extends AbstractShopwareApiClientInterface
     const CACHE_TAG = 'showpare_shop';
     const ENTITY_CLASS_NAME = Shop::class;
 
+    /**
+     * @param $id
+     * @param bool $doCacheRequest
+     * @param array $params
+     *
+     * @return \Portrino\PxShopware\Domain\Model\Shop
+     */
+    public function findById($id, $doCacheRequest = TRUE, $params = []);
+
 }

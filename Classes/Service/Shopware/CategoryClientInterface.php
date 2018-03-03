@@ -39,6 +39,15 @@ interface CategoryClientInterface extends AbstractShopwareApiClientInterface
     const ENTITY_CLASS_NAME = Category::class;
 
     /**
+     * @param $id
+     * @param bool $doCacheRequest
+     * @param array $params
+     *
+     * @return \Portrino\PxShopware\Domain\Model\Category
+     */
+    public function findById($id, $doCacheRequest = TRUE, $params = []);
+
+    /**
      * @param int $parentId
      * @return \TYPO3\CMS\Extbase\Persistence\ObjectStorage <\Portrino\PxShopware\Domain\Model\Category>
      */
