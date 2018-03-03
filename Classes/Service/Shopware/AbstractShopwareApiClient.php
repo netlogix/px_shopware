@@ -29,7 +29,6 @@ use Portrino\PxShopware\Cache\CacheChainFactory;
 use Portrino\PxShopware\Service\Shopware\Exceptions\ShopwareApiClientConfigurationException;
 use Portrino\PxShopware\Service\Shopware\Exceptions\ShopwareApiClientException;
 use Portrino\PxShopware\Service\Shopware\Exceptions\ShopwareApiClientJsonException;
-use Portrino\PxShopware\Service\Shopware\Exceptions\ShopwareApiClientRequestException;
 use Portrino\PxShopware\Service\Shopware\Exceptions\ShopwareApiClientResponseException;
 use TYPO3\CMS\Core\Cache\Frontend\FrontendInterface;
 use TYPO3\CMS\Core\Http\HttpRequest;
@@ -75,6 +74,11 @@ abstract class AbstractShopwareApiClient implements SingletonInterface, Abstract
      * @var int
      */
     protected $shopId;
+
+    /**
+     * @var string
+     */
+    protected $status = self::STATUS_DISCONNECTED;
 
     /**
      * @var \Portrino\PxShopware\Service\Shopware\ConfigurationService
@@ -150,8 +154,6 @@ abstract class AbstractShopwareApiClient implements SingletonInterface, Abstract
      * @param array $params
      * @param bool $doCacheRequest
      * @return mixed
-     * @throws ShopwareApiClientRequestException
-     * @throws \Exception
      */
     public function call($endpoint, $method = HttpRequest::METHOD_GET, $data = [], $params = [], $doCacheRequest = true)
     {
@@ -208,6 +210,8 @@ abstract class AbstractShopwareApiClient implements SingletonInterface, Abstract
 
         } catch (ShopwareApiClientException $exception) {
             $this->logException($exception);
+        } catch (\HTTP_Request2_Exception $exception) {
+            $this->logException($exception);
         }
     }
 
@@ -216,6 +220,7 @@ abstract class AbstractShopwareApiClient implements SingletonInterface, Abstract
      * @return mixed|string
      * @throws ShopwareApiClientJsonException
      * @throws ShopwareApiClientResponseException
+     * @throws \HTTP_Request2_Exception
      */
     protected function prepareResponse(\HTTP_Request2_Response $response)
     {
@@ -287,7 +292,6 @@ abstract class AbstractShopwareApiClient implements SingletonInterface, Abstract
      * @param bool $doCacheRequest
      *
      * @return mixed
-     * @throws ShopwareApiClientException
      */
     public function get($url, $params = [], $doCacheRequest = true)
     {
@@ -300,7 +304,6 @@ abstract class AbstractShopwareApiClient implements SingletonInterface, Abstract
      * @param array $params
      *
      * @return string
-     * @throws ShopwareApiClientException
      */
     public function post($url, $data = [], $params = [])
     {
@@ -313,7 +316,6 @@ abstract class AbstractShopwareApiClient implements SingletonInterface, Abstract
      * @param array $params
      *
      * @return string
-     * @throws ShopwareApiClientException
      */
     public function put($url, $data = [], $params = [])
     {
@@ -325,7 +327,6 @@ abstract class AbstractShopwareApiClient implements SingletonInterface, Abstract
      * @param array $params
      *
      * @return string
-     * @throws ShopwareApiClientException
      */
     public function delete($url, $params = [])
     {
@@ -333,7 +334,7 @@ abstract class AbstractShopwareApiClient implements SingletonInterface, Abstract
     }
 
     /**
-     * @param ShopwareApiClientException $exception
+     * @param ShopwareApiClientException|\HTTP_Request2_Exception $exception
      */
     protected function logException($exception)
     {
@@ -372,23 +373,10 @@ abstract class AbstractShopwareApiClient implements SingletonInterface, Abstract
 
     /**
      * @return bool
-     * @throws ShopwareApiClientException
      */
     public function isConnected()
     {
-        $result = false;
-        $response = null;
-        try {
-            $response = $this->get('version', [], false);
-            if ($response) {
-                $result = ($response->success);
-            }
-        } catch (ShopwareApiClientException $exception) {
-            $this->logException($exception);
-            $result = false;
-        } finally {
-            return $result;
-        }
+        return $this->getStatus() !== self::STATUS_DISCONNECTED;
     }
 
     /**
@@ -398,29 +386,19 @@ abstract class AbstractShopwareApiClient implements SingletonInterface, Abstract
      * - status_disconnected (No connection to shopware system possible)
      *
      * @return string
-     * @throws ShopwareApiClientException
      */
     public function getStatus()
     {
-        $result = self::STATUS_DISCONNECTED;
-        $response = null;
-        try {
+        if ($this->status === self::STATUS_DISCONNECTED) {
             $response = $this->get('version', [], false);
-
-            if ($response) {
-                if ($response->success && isset($response->pxShopwareTypo3Token) && (boolean)$response->pxShopwareTypo3Token) {
-                    $result = self::STATUS_CONNECTED_FULL;
-                } else {
-                    if ($response->success && !isset($response->pxShopwareTypo3Token)) {
-                        $result = self::STATUS_CONNECTED_TRIAL;
-                    }
-                }
+            if ($response === null) {
+                $this->status = self::STATUS_DISCONNECTED;
+            } elseif ($response->success && isset($response->pxShopwareTypo3Token) && (boolean)$response->pxShopwareTypo3Token) {
+                $this->status = self::STATUS_CONNECTED_FULL;
+            } elseif ($response->success && !isset($response->pxShopwareTypo3Token)) {
+                $this->status = self::STATUS_CONNECTED_TRIAL;
             }
-        } catch (ShopwareApiClientException $exception) {
-            $this->logException($exception);
-            $result = self::STATUS_DISCONNECTED;
-        } finally {
-            return $result;
+            return $this->status;
         }
     }
 
