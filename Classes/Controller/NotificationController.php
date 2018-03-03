@@ -1,4 +1,5 @@
 <?php
+
 namespace Portrino\PxShopware\Controller;
 
 /***************************************************************
@@ -27,8 +28,11 @@ namespace Portrino\PxShopware\Controller;
 
 use ApacheSolrForTypo3\Solr\GarbageCollector;
 use ApacheSolrForTypo3\Solr\Util;
+use Portrino\PxShopware\Domain\Model\Command;
 use Portrino\PxShopware\Service\Shopware\ArticleClientInterface;
 use Portrino\PxShopware\Service\Shopware\CategoryClientInterface;
+use Portrino\PxShopware\Service\Shopware\CustomerClientInterface;
+use Portrino\PxShopware\Service\Shopware\CustomerGroupClientInterface;
 use Portrino\PxShopware\Service\Shopware\Exceptions\ShopwareApiClientConfigurationException;
 use Portrino\PxShopware\Service\Shopware\MediaClientInterface;
 use Portrino\PxShopware\Service\Shopware\ShopClientInterface;
@@ -43,18 +47,10 @@ use TYPO3\CMS\Extbase\Mvc\Controller\ActionController;
 class NotificationController extends ActionController
 {
 
-    const COMMAND_CREATE = 'create';
-    const COMMAND_UPDATE = 'update';
-    const COMMAND_DELETE = 'delete';
-
-    const TYPE_ARTICLE = 'article';
-    const TYPE_CATEGORY = 'category';
-    const TYPE_MEDIA = 'media';
-    const TYPE_SHOP = 'shop';
-    const TYPE_VERSION = 'version';
-
     const SOLR_ITEM_TYPE_ARTICLE = 'Portrino_PxShopware_Domain_Model_Article';
     const SOLR_ITEM_TYPE_CATEGORY = 'Portrino_PxShopware_Domain_Model_Category';
+
+    const SIGNAL_ON_COMMAND_RECEIVE = 'onCommandReceive';
 
     /**
      * @var \Portrino\PxShopware\Service\Shopware\ConfigurationService
@@ -78,6 +74,12 @@ class NotificationController extends ActionController
      * @inject
      */
     protected $articleClient;
+
+    /**
+     * @var \TYPO3\CMS\Extbase\SignalSlot\Dispatcher
+     * @inject
+     */
+    protected $signalSlotDispatcher;
 
     /**
      * @var int
@@ -123,19 +125,26 @@ class NotificationController extends ActionController
      */
     public function indexAction($payload)
     {
-        foreach ($payload['data'] as $command) {
-            $this->flushCacheForCommand($command['type'], intval($command['id']));
-            if (isset($command['id']) && $command['id'] !== '' && ExtensionManagementUtility::isLoaded('solr') === true) {
+        foreach ($payload['data'] as $data) {
+            $command = Command::fromArray($data);
+            $this->flushCacheForCommand($command->getType(), $command->getId());
 
-                switch ($command['action']) {
-                    case self::COMMAND_CREATE;
-                        $this->addItemToQueue($command['type'], intval($command['id']));
+            try {
+                $this->signalSlotDispatcher->dispatch(__CLASS__, self::SIGNAL_ON_COMMAND_RECEIVE, [$command, $this]);
+            } catch (\Exception $e) {
+            }
+
+            if ($command->getId() !== 0 && ExtensionManagementUtility::isLoaded('solr') === true) {
+                switch ($command->getAction()) {
+                    case Command::ACTION_CREATE;
+                        $this->addItemToQueue($command->getType(), $command->getId());
                         break;
-                    case self::COMMAND_UPDATE;
-                        $this->addItemToQueue($command['type'], intval($command['id']));
+                    case Command::ACTION_MOVE;
+                    case Command::ACTION_UPDATE;
+                        $this->addItemToQueue($command->getType(), $command->getId());
                         break;
-                    case self::COMMAND_DELETE;
-                        $this->deleteItemFromQueueAndCore($command['type'], intval($command['id']));
+                    case Command::ACTION_DELETE;
+                        $this->deleteItemFromQueueAndCore($command->getType(), $command->getId());
                         break;
                     default:
                         $this->response->setStatus(400);
@@ -173,7 +182,7 @@ class NotificationController extends ActionController
     protected function addItemToQueue($type, $id)
     {
         switch ($type) {
-            case self::TYPE_ARTICLE;
+            case Command::TYPE_ARTICLE;
                 if ($this->indexQueue->containsItem(self::SOLR_ITEM_TYPE_ARTICLE, $id)) {
                     $this->updateItemInQueue($type, $id);
                     break;
@@ -186,7 +195,7 @@ class NotificationController extends ActionController
                 ];
                 $this->addItem($item);
                 break;
-            case self::TYPE_CATEGORY;
+            case Command::TYPE_CATEGORY;
                 if ($this->indexQueue->containsItem(self::SOLR_ITEM_TYPE_CATEGORY, $id)) {
                     $this->updateItemInQueue($type, $id);
                     break;
@@ -222,10 +231,10 @@ class NotificationController extends ActionController
     protected function updateItemInQueue($type, $id)
     {
         switch ($type) {
-            case self::TYPE_ARTICLE;
+            case Command::TYPE_ARTICLE;
                 $this->indexQueue->updateItem(self::SOLR_ITEM_TYPE_ARTICLE, $id, null, $this->currentTimeStamp);
                 break;
-            case self::TYPE_CATEGORY;
+            case Command::TYPE_CATEGORY;
                 $this->indexQueue->updateItem(self::SOLR_ITEM_TYPE_CATEGORY, $id, null, $this->currentTimeStamp);
                 break;
         }
@@ -241,10 +250,10 @@ class NotificationController extends ActionController
         $garbageCollector = GeneralUtility::makeInstance(GarbageCollector::class);
 
         switch ($type) {
-            case self::TYPE_ARTICLE;
+            case Command::TYPE_ARTICLE;
                 $garbageCollector->collectGarbage(self::SOLR_ITEM_TYPE_ARTICLE, $id);
                 break;
-            case self::TYPE_CATEGORY;
+            case Command::TYPE_CATEGORY;
                 $garbageCollector->collectGarbage(self::SOLR_ITEM_TYPE_CATEGORY, $id);
                 break;
             default:
@@ -260,20 +269,26 @@ class NotificationController extends ActionController
     protected function flushCacheForCommand($type, $id)
     {
         switch ($type) {
-            case self::TYPE_ARTICLE;
+            case Command::TYPE_ARTICLE;
                 $tag = ArticleClientInterface::CACHE_TAG;
                 break;
-            case self::TYPE_CATEGORY;
+            case Command::TYPE_CATEGORY;
                 $tag = CategoryClientInterface::CACHE_TAG;
                 break;
-            case self::TYPE_MEDIA;
+            case Command::TYPE_MEDIA;
                 $tag = MediaClientInterface::CACHE_TAG;
                 break;
-            case self::TYPE_SHOP;
+            case Command::TYPE_SHOP;
                 $tag = ShopClientInterface::CACHE_TAG;
                 break;
-            case self::TYPE_VERSION;
+            case Command::TYPE_VERSION;
                 $tag = VersionClientInterface::CACHE_TAG;
+                break;
+            case Command::TYPE_CUSTOMER;
+                $tag = CustomerClientInterface::CACHE_TAG;
+                break;
+            case Command::TYPE_CUSTOMER_GROUP;
+                $tag = CustomerGroupClientInterface::CACHE_TAG;
                 break;
             default:
                 $tag = 'shopware_' . $type;
