@@ -25,7 +25,7 @@ namespace Portrino\PxShopware\Service\Solr\Indexer;
  *  This copyright notice MUST APPEAR in all copies of the script!
  ***************************************************************/
 
-use ApacheSolrForTypo3\Solr\IndexQueue\Item;
+use Portrino\PxShopware\Domain\Model\AbstractShopwareModel;
 use Portrino\PxShopware\Domain\Model\Article;
 use Portrino\PxShopware\Domain\Model\Category;
 use Portrino\PxShopware\Domain\Model\Detail;
@@ -48,11 +48,14 @@ class ArticleIndexer extends AbstractShopwareIndexer
     /**
      * check if record should be added/updated or deleted from index
      *
-     * @param Article $article The item to index
+     * @param AbstractShopwareModel $article The item to index
      * @return bool valid or not
      */
-    protected function itemIsValid(Article $article)
+    protected function itemIsValid(AbstractShopwareModel $article)
     {
+        if (!$article instanceof Article) {
+            return false;
+        }
 
         $result = parent::itemIsValid($article);
 
@@ -68,12 +71,15 @@ class ArticleIndexer extends AbstractShopwareIndexer
      * overwrite special fields for articles
      *
      * @param \Apache_Solr_Document $itemDocument
-     * @param Article $article
+     * @param AbstractShopwareModel $article
      * @param integer $language The language to use.
      * @return \Apache_Solr_Document $itemDocument
      */
-    protected function overwriteSpecialFields(\Apache_Solr_Document $itemDocument, Article $article, $language = 0)
+    protected function overwriteSpecialFields(\Apache_Solr_Document $itemDocument, AbstractShopwareModel $article, $language = 0)
     {
+        if (!$article instanceof Article) {
+            return $itemDocument;
+        }
 
         $itemDocument->setField('title', $article->getName());
 
