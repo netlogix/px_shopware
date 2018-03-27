@@ -87,7 +87,7 @@ class AbstractShopwareIndexer extends Indexer
 
         // get general fields
         /** @var \Apache_Solr_Document $itemDocument */
-        $itemDocument = $this->getBaseDocument($item, $itemRecord);
+        $itemDocument = $this->getBaseDocument($item, ['item' => $itemRecord]);
 
         $itemIndexingConfiguration = $this->getItemTypeConfiguration($item, $language);
 
@@ -196,11 +196,13 @@ class AbstractShopwareIndexer extends Indexer
      * Creates a Solr document with the basic / core fields set already.
      *
      * @param Item $item The item to index
-     * @param AbstractShopwareModel $itemRecord The record to use to build the base document
+     * @param array $itemRecord The record to use to build the base document
      * @return \Apache_Solr_Document A basic Solr document
      */
-    protected function getBaseDocument(Item $item, AbstractShopwareModel $itemRecord)
+    protected function getBaseDocument(Item $item, array $itemRecord)
     {
+        /** @var AbstractShopwareModel $itemRecord */
+        $itemRecord = $itemRecord['item'];
         $site = GeneralUtility::makeInstance(Site::class, $item->getRootPageUid());
 
         /** @var $document \Apache_Solr_Document */
