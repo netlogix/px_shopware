@@ -1,4 +1,5 @@
 <?php
+
 namespace Portrino\PxShopware\Domain\Model;
 
 /***************************************************************
@@ -24,15 +25,11 @@ namespace Portrino\PxShopware\Domain\Model;
  *
  *  This copyright notice MUST APPEAR in all copies of the script!
  ***************************************************************/
+
 use Portrino\PxShopware\Backend\Form\Wizard\SuggestEntryInterface;
 use Portrino\PxShopware\Backend\Hooks\ItemEntryInterface;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
-/**
- * Class Article
- *
- * @package Portrino\PxShopware\Domain\Model
- */
 class Article extends AbstractShopwareModel implements SuggestEntryInterface, ItemEntryInterface
 {
 
@@ -353,7 +350,7 @@ class Article extends AbstractShopwareModel implements SuggestEntryInterface, It
     {
         if ($this->details->count() === 0) {
 
-                // check if raw details are available or get them from API
+            // check if raw details are available or get them from API
             if (!isset($this->getRaw()->details)) {
                 /** @var Article $detail */
                 $detailedArticle = $this->articleClient->findById($this->getId(), false);
@@ -361,7 +358,7 @@ class Article extends AbstractShopwareModel implements SuggestEntryInterface, It
             } else {
                 $details = (array)$this->getRaw()->details;
             }
-                // build Detail models and add them to ObjectStorage
+            // build Detail models and add them to ObjectStorage
             foreach ($details as $detailData) {
                 /** @var Detail $detail */
                 $detail = $this->objectManager->get(Detail::class, $detailData, $this->token);

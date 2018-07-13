@@ -25,16 +25,12 @@ namespace Portrino\PxShopware\Domain\Model;
  *
  *  This copyright notice MUST APPEAR in all copies of the script!
  ***************************************************************/
+
 use Portrino\PxShopware\Backend\Form\Wizard\SuggestEntryInterface;
 use Portrino\PxShopware\Backend\Hooks\ItemEntryInterface;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Extbase\Persistence\ObjectStorage;
 
-/**
- * Class Category
- *
- * @package Portrino\PxShopware\Domain\Model
- */
 class Category extends AbstractShopwareModel implements SuggestEntryInterface, ItemEntryInterface
 {
 

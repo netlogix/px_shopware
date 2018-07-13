@@ -1,4 +1,5 @@
 <?php
+
 namespace Portrino\PxShopware\Domain\Model;
 
 /***************************************************************
@@ -25,12 +26,8 @@ namespace Portrino\PxShopware\Domain\Model;
  *  This copyright notice MUST APPEAR in all copies of the script!
  ***************************************************************/
 
-/**
- * Class Media
- *
- * @package Portrino\PxShopware\Domain\Model
- */
-class Media extends AbstractShopwareModel {
+class Media extends AbstractShopwareModel
+{
 
     /**
      * @var string
@@ -41,7 +38,8 @@ class Media extends AbstractShopwareModel {
      * @param object $raw
      * @param string $token
      */
-    public function __construct($raw, $token) {
+    public function __construct($raw, $token)
+    {
         parent::__construct($raw, $token);
 
         if (isset($this->raw->path)) {
@@ -52,14 +50,16 @@ class Media extends AbstractShopwareModel {
     /**
      * @return string
      */
-    public function getUrl() {
+    public function getUrl()
+    {
         return $this->url;
     }
 
     /**
      * @param string $url
      */
-    public function setUrl($url) {
+    public function setUrl($url)
+    {
         $this->url = $url;
     }
 

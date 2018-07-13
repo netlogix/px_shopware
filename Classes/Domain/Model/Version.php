@@ -1,4 +1,5 @@
 <?php
+
 namespace Portrino\PxShopware\Domain\Model;
 
 /***************************************************************
@@ -25,11 +26,6 @@ namespace Portrino\PxShopware\Domain\Model;
  *  This copyright notice MUST APPEAR in all copies of the script!
  ***************************************************************/
 
-/**
- * Class Version
- *
- * @package Portrino\PxShopware\Domain\Model
- */
 class Version extends AbstractShopwareModel
 {
 
