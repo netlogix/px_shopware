@@ -1,4 +1,5 @@
 <?php
+
 namespace Portrino\PxShopware\Domain\Model;
 
 /***************************************************************
@@ -24,14 +25,10 @@ namespace Portrino\PxShopware\Domain\Model;
  *
  *  This copyright notice MUST APPEAR in all copies of the script!
  ***************************************************************/
+
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Extbase\Object\ObjectManager;
 
-/**
- * Class AbstractShopwareModel
- *
- * @package Portrino\PxShopware\Domain\Model
- */
 abstract class AbstractShopwareModel implements ShopwareModelInterface
 {
 
@@ -117,5 +114,21 @@ abstract class AbstractShopwareModel implements ShopwareModelInterface
     public function setToken($token)
     {
         $this->token = $token;
+    }
+
+    /**
+     * @param $name
+     * @return mixed
+     */
+    public function getAttributeValue($name)
+    {
+        if (!property_exists($this->getRaw(), 'attribute')) {
+            return null;
+        }
+        $attribute = $this->getRaw()->attribute;
+        if ($attribute !== null && !property_exists($attribute, $name)) {
+            return null;
+        }
+        return $attribute->{$name};
     }
 }
