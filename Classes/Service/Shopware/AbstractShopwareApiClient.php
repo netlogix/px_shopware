@@ -398,8 +398,8 @@ abstract class AbstractShopwareApiClient implements SingletonInterface, Abstract
             } elseif ($response->success && !isset($response->pxShopwareTypo3Token)) {
                 $this->status = self::STATUS_CONNECTED_TRIAL;
             }
-            return $this->status;
         }
+        return $this->status;
     }
 
     /**
