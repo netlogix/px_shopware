@@ -70,12 +70,16 @@ class LanguageToShopwareMappingService implements SingletonInterface
             $settings = Util::getConfigurationFromPageId($page, $language);
         }
 
-        foreach ($settings['api']['languageToShopware'] as $shopToLocaleMapping) {
-            if ((int)$language === (int)$shopToLocaleMapping['sys_language_uid']) {
-                $shopId = (int)$shopToLocaleMapping['shop_id'];
-                break;
-            }
+        $shopToLocaleMapping = current(array_filter((array)$settings['api']['languageToShopware'], function ($shopToLocaleMapping) use ($language) {
+            return (int)$language === (int)$shopToLocaleMapping['sys_language_uid'];
+        }));
+
+        if ($shopToLocaleMapping === false && !empty($settings['api']['languageToShopware'])) {
+            $shopId = current($settings['api']['languageToShopware'])['shop_id'];
+        } elseif ($shopToLocaleMapping !== false) {
+            $shopId = (int)$shopToLocaleMapping['shop_id'];
         }
+
         return $shopId;
     }
 
