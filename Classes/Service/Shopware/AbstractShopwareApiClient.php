@@ -508,7 +508,7 @@ abstract class AbstractShopwareApiClient implements SingletonInterface, Abstract
             $total = $result->total;
 
             if (isset($result->data) && is_array($result->data)) {
-                while (count($result->data) <= $total) {
+                while (count($result->data) < $total) {
                     $params['start'] = $params['start'] + $params['limit'];
                     $nextResult = $this->get($this->getValidEndpoint(), $params, $doCacheRequest);
                     $result->data = array_merge($result->data, $nextResult->data);

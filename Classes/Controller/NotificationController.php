@@ -35,6 +35,7 @@ use Portrino\PxShopware\Service\Shopware\CustomerClientInterface;
 use Portrino\PxShopware\Service\Shopware\CustomerGroupClientInterface;
 use Portrino\PxShopware\Service\Shopware\Exceptions\ShopwareApiClientConfigurationException;
 use Portrino\PxShopware\Service\Shopware\MediaClientInterface;
+use Portrino\PxShopware\Service\Shopware\ProductStreamClientInterface;
 use Portrino\PxShopware\Service\Shopware\ShopClientInterface;
 use Portrino\PxShopware\Service\Shopware\VersionClientInterface;
 use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
@@ -289,6 +290,9 @@ class NotificationController extends ActionController
                 break;
             case Command::TYPE_CUSTOMER_GROUP;
                 $tag = CustomerGroupClientInterface::CACHE_TAG;
+                break;
+            case Command::TYPE_PRODUCT_STREAM;
+                $tag = ProductStreamClientInterface::CACHE_TAG;
                 break;
             default:
                 $tag = 'shopware_' . $type;

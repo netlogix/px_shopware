@@ -17,6 +17,7 @@ class Command implements \JsonSerializable
     const TYPE_VERSION = 'version';
     const TYPE_CUSTOMER = 'customer';
     const TYPE_CUSTOMER_GROUP = 'customergroup';
+    const TYPE_PRODUCT_STREAM = 'productstream';
 
     /**
      * @var integer
