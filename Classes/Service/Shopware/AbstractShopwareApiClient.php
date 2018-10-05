@@ -275,6 +275,15 @@ abstract class AbstractShopwareApiClient implements SingletonInterface, Abstract
             case VersionClientInterface::ENDPOINT:
                 $cacheTag = VersionClientInterface::CACHE_TAG;
                 break;
+            case CustomerClientInterface::ENDPOINT:
+                $cacheTag = CustomerClientInterface::CACHE_TAG;
+                break;
+            case CustomerGroupClientInterface::ENDPOINT:
+                $cacheTag = CustomerGroupClientInterface::CACHE_TAG;
+                break;
+            case ProductStreamClientInterface::ENDPOINT:
+                $cacheTag = ProductStreamClientInterface::CACHE_TAG;
+                break;
             default:
                 $cacheTag = 'showpare_' . $urlParts[0];
         }
